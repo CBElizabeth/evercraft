@@ -2,34 +2,36 @@ require 'yaml'
 
 class Character
   
-  attr_reader :alignment, :armor_class, :ability_scores
-  attr_accessor :name, :hit_points, :experience, :level
+  attr_reader :alignment, :armor_class, :ability_scores, :level
+  # Both :hit_points and :experience are bad candidates for a setter
+  attr_accessor :name, :hit_points, :experience
   
-  CONSTANTS = YAML.load_file("constants.yml")
-  POSSIBLE_ALIGNMENTS = CONSTANTS["alignments"]
-  ABILITIES = CONSTANTS["abilities"]
-  ABILITY_MODIFIERS = CONSTANTS["ability_modifiers"]
-  DIE = Random.new
+  @constants = YAML.load_file("constants.yml")
+  # Torn between loading the YAML multiple times and having so many global variables
+  @@possible_alignments = @constants["alignments"]
+  @@abilities = @constants["abilities"]
+  @@ability_modifiers = @constants["ability_modifiers"]
+  @@die = Random.new
   
   def initialize(name)
     @name = name
     @alignment = "neutral"
     @level = 1
     @experience = 0
-    @ability_scores = Hash[ABILITIES.map {|ability| [ability,10]}]
+    @ability_scores = Hash[@@abilities.map {|ability| [ability,10]}]
     @armor_class = 10 + ability_modifier("dexterity")
     @hit_points = [5 + ability_modifier("constitution"), 1].max
   end
   
   def alignment=(alignment)
-    unless POSSIBLE_ALIGNMENTS.include? alignment
-      raise RuntimeError, "'#{alignment}' is invalid. Alignment options are: #{POSSIBLE_ALIGNMENTS.join(", ")}"
+    unless @@possible_alignments.include? alignment
+      raise RuntimeError, "'#{alignment}' is invalid. Alignment options are: #{@@possible_alignments.join(", ")}"
     end
     @alignment = alignment
   end
   
   def ability_modifier(ability)
-    ABILITY_MODIFIERS[@ability_scores[ability]].to_i
+    @@ability_modifiers[@ability_scores[ability]].to_i
   end
   
   def level_up?
@@ -47,7 +49,7 @@ class Character
   end
   
   def attack(target, test_die)
-    roll = test_die || DIE.rand(1..20)
+    roll = test_die || @@die.rand(1..20)
     unless target.hit_points < 0
       if roll == 20
         target.hit_points -= attack_power(roll)
